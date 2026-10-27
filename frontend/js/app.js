@@ -39,15 +39,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize Platform Data
   async function initPlatform() {
-    try {
-      const res = await fetch("../database/database.json");
-      const db = await res.json();
-      state.users = db.users || [];
-      state.problems = db.problems || [];
-      state.teams = db.teams || [];
-      state.submissions = db.submissions || [];
-    } catch (e) {
-      console.warn("Could not load ../database/database.json, using embedded fallback.");
+    // Check window.CODERANK_DATA first (works when opened directly via file://)
+    let db = window.CODERANK_DATA;
+    if (!db) {
+      try {
+        const res = await fetch("../database/database.json");
+        db = await res.json();
+      } catch (e) {
+        console.warn("Could not load ../database/database.json, using embedded fallback.");
+        db = null;
+      }
+    }
+
+    if (db) {
+      state.users = JSON.parse(JSON.stringify(db.users || []));
+      state.problems = JSON.parse(JSON.stringify(db.problems || []));
+      state.teams = JSON.parse(JSON.stringify(db.teams || []));
+      state.submissions = JSON.parse(JSON.stringify(db.submissions || []));
+    } else {
       loadEmbeddedFallback();
     }
 
@@ -66,7 +75,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Populate Member 3 ADS
     state.users.forEach(u => {
-      state.dsu.makeSet(u.id, `Team_${u.teamId || u.id}`, u.score);
+      const teamObj = state.teams.find(t => t.id === u.teamId);
+      const teamName = teamObj ? teamObj.name : `Team_${u.teamId || u.id}`;
+      state.dsu.makeSet(u.id, teamName, u.score);
       state.freezeEngine.registerUser(u.id, u.score);
     });
 
@@ -88,8 +99,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-    // Populate Submission Queue
+    // Populate Submission Queue (ensure time property exists)
     state.submissions.forEach(s => {
+      if (s.time === undefined && s.contestTimeMin !== undefined) {
+        s.time = s.contestTimeMin;
+      }
       state.binomialHeap.insert(s);
     });
 
@@ -99,6 +113,9 @@ document.addEventListener("DOMContentLoaded", () => {
     renderQueue();
     renderTeams();
     renderBenchmarkTable();
+    populateContestantSelect();
+    populatePlagiarismSelect();
+    renderVisualizer();
   }
 
   function loadEmbeddedFallback() {
@@ -142,6 +159,9 @@ document.addEventListener("DOMContentLoaded", () => {
       document.querySelectorAll(".tab-pane").forEach(pane => {
         pane.style.display = pane.id === targetId ? "block" : "none";
       });
+      if (targetId === "tab-visualizer") {
+        renderVisualizer();
+      }
     });
   });
 
@@ -175,10 +195,14 @@ document.addEventListener("DOMContentLoaded", () => {
       else if (u.score >= 1600) tierBadge = `<span class="tier-badge tier-expert">Expert</span>`;
 
       const teamName = state.dsu.getTeamName(u.id);
+      const pendingCount = state.freezeEngine.pendingCounts[u.id] || 0;
+      const pendingBadge = pendingCount > 0
+        ? ` <span class="status-badge frozen" style="font-size:0.7rem; padding:0.15rem 0.45rem; margin-left:0.35rem;">❄️ ${pendingCount} pending</span>`
+        : '';
 
       tr.innerHTML = `
         <td>${rankBadge}</td>
-        <td><strong>${u.name}</strong> <small style="color:var(--text-dim)">(ID ${u.id})</small></td>
+        <td><strong>${u.name}</strong> <small style="color:var(--text-dim)">(ID ${u.id})</small>${pendingBadge}</td>
         <td>${tierBadge}</td>
         <td><strong style="color:var(--accent-purple)">${u.score}</strong></td>
         <td><span style="color:var(--accent-cyan)">${teamName}</span></td>
@@ -247,9 +271,14 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <h4 style="margin: 0.5rem 0 0.25rem 0; font-size:1.05rem;">${p.name}</h4>
         <p style="font-size:0.8rem; color:var(--text-muted);">${p.category || 'Algorithms'}</p>
-        <button class="btn btn-secondary btn-submit-code" data-pid="${p.id}" data-pname="${p.name}" style="margin-top:0.75rem; width:100%;">
-          Submit Code
-        </button>
+        <div style="display:flex; gap:0.5rem; width:100%; margin-top:0.75rem;">
+          <button class="btn btn-secondary btn-submit-code" data-pid="${p.id}" data-pname="${p.name}" style="flex:1;">
+            Submit Code
+          </button>
+          <button class="btn btn-danger btn-delete-problem" data-pid="${p.id}" data-pname="${p.name}" data-diff="${p.difficulty}" style="padding:0.55rem 0.75rem;">
+            🗑️ Delete
+          </button>
+        </div>
       `;
       grid.appendChild(card);
     });
@@ -261,7 +290,74 @@ document.addEventListener("DOMContentLoaded", () => {
         openSubmitModal(pId, pName);
       });
     });
+
+    // Delete problem from AVL Tree, Trie, and state
+    document.querySelectorAll(".btn-delete-problem").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const pId = parseInt(btn.getAttribute("data-pid"));
+        const pName = btn.getAttribute("data-pname");
+        const pDiff = parseInt(btn.getAttribute("data-diff"));
+
+        state.avlTree.delete(pId, pDiff);
+        state.probTrie.delete(pName);
+        state.problems = state.problems.filter(p => p.id !== pId);
+
+        showToast(`Problem #${pId} ("${pName}") deleted from AVL Tree!`, "info");
+        renderProblemset();
+        populatePlagiarismSelect();
+        updateHeroStats();
+        renderVisualizer();
+      });
+    });
   }
+
+  // Add Problem form submit
+  document.getElementById("btnAddProblem")?.addEventListener("click", () => {
+    const nameInput = document.getElementById("newProblemName");
+    const diffInput = document.getElementById("newProblemDiff");
+    const catInput = document.getElementById("newProblemCategory");
+
+    const name = nameInput?.value?.trim() || "";
+    const diff = parseInt(diffInput?.value);
+    const cat = catInput?.value?.trim() || "Algorithms";
+
+    // Validate problem inputs
+    if (!name) {
+      showToast("Problem name cannot be empty!", "error");
+      return;
+    }
+    if (state.problems.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      showToast(`A problem named "${name}" already exists!`, "error");
+      return;
+    }
+    if (isNaN(diff) || diff < 800 || diff > 3500) {
+      showToast("Difficulty must be between 800 and 3500!", "error");
+      return;
+    }
+
+    // Allocate next free problem ID
+    const nextId = state.problems.reduce((max, p) => Math.max(max, p.id), 0) + 1;
+    const newProblem = {
+      id: nextId,
+      name: name,
+      difficulty: diff,
+      category: cat
+    };
+
+    state.problems.push(newProblem);
+    state.avlTree.insert(newProblem);
+    state.probTrie.insert(newProblem.name);
+
+    if (nameInput) nameInput.value = "";
+    if (diffInput) diffInput.value = "1200";
+    if (catInput) catInput.value = "";
+
+    showToast(`Problem #${newProblem.id} ("${newProblem.name}") added to AVL Tree!`, "success");
+    renderProblemset();
+    populatePlagiarismSelect();
+    updateHeroStats();
+    renderVisualizer();
+  });
 
   // Trie Autocomplete on Problems
   const probSearchInput = document.getElementById("searchProblemInput");
@@ -325,7 +421,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <p style="margin:0.5rem 0; font-size:0.9rem;">
           Matched with existing database submission from <strong>User #${res.matchedSubmission.userId}</strong> for Problem #${pId}.
         </p>
-        <div style="background:rgba(0,0,0,0.4); padding:0.75rem; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">
+        <div style="background:#f1f5f9; border:1px solid #e2e8f0; color:#0f172a; padding:0.75rem; border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">
           Matched Substring Chunk: "${res.matchedChunk}"
         </div>
       `;
@@ -361,13 +457,19 @@ document.addEventListener("DOMContentLoaded", () => {
     subs.forEach(s => {
       const card = document.createElement("div");
       card.className = "tree-node-card";
+      const u = state.users.find(x => x.id === s.userId);
+      const p = state.problems.find(x => x.id === s.problemId);
+      const uName = s.userName || (u ? u.username : `User #${s.userId}`);
+      const pName = s.problemName || (p ? p.name : `Problem #${s.problemId}`);
+      const sTime = s.time ?? s.contestTimeMin ?? 0;
+
       card.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <div>
-            <strong>Sub ID #${s.id}</strong> by User ${s.userId} 
-            <span style="color:var(--accent-cyan); margin-left:0.5rem;">Problem #${s.problemId}</span>
+            <strong>Sub ID #${s.id}</strong> by <strong>${uName}</strong> 
+            <span style="color:var(--accent-cyan); margin-left:0.5rem;">${pName}</span>
           </div>
-          <span style="font-family:'JetBrains Mono',monospace; color:var(--accent-amber);">${s.time}m</span>
+          <span style="font-family:'JetBrains Mono',monospace; color:var(--accent-amber);">${sTime}m</span>
         </div>
       `;
       listContainer.appendChild(card);
@@ -377,11 +479,36 @@ document.addEventListener("DOMContentLoaded", () => {
     const peekBox = document.getElementById("nextJudgedSub");
     if (peekBox) {
       if (peek) {
-        peekBox.innerHTML = `Next in line (Min-Heap Priority): <strong>Sub #${peek.id}</strong> at <strong>${peek.time}m</strong> by User ${peek.userId}`;
+        const peekU = state.users.find(x => x.id === peek.userId);
+        const peekP = state.problems.find(x => x.id === peek.problemId);
+        const peekUName = peek.userName || (peekU ? peekU.username : `User #${peek.userId}`);
+        const peekPName = peek.problemName || (peekP ? peekP.name : `Problem #${peek.problemId}`);
+        const peekTime = peek.time ?? peek.contestTimeMin ?? 0;
+        peekBox.innerHTML = `Next in line (Min-Heap Priority): <strong>Sub #${peek.id}</strong> by <strong>${peekUName}</strong> for <em>${peekPName}</em> at <strong>${peekTime}m</strong>`;
       } else {
         peekBox.innerHTML = `Queue is currently empty.`;
       }
     }
+  }
+
+  // Helper function to update score everywhere consistently
+  function applyScoreChange(userId, delta) {
+    const u = state.users.find(x => x.id === userId);
+    if (!u) return;
+    const oldScore = u.score;
+    const newScore = oldScore + delta;
+
+    // Remove old score to prevent duplicate rows in Treap and SegTree
+    state.treap.erase(oldScore, u.id);
+    state.segTree.add(oldScore, -1);
+
+    // Insert new score
+    state.treap.insert(newScore, u.id, u.username);
+    state.segTree.add(newScore, 1);
+
+    // Update user object and DSU
+    u.score = newScore;
+    state.dsu.updateUserScore(userId, delta);
   }
 
   // Judge Next Button
@@ -391,26 +518,31 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const sub = state.binomialHeap.extractMin();
-    const isFrozen = state.freezeEngine.isFrozen;
-    const delta = 100;
+    const verdict = sub.verdict || "Accepted";
+    const delta = (verdict === "Accepted") ? 100 : 0;
+    const subTime = sub.time ?? sub.contestTimeMin ?? 0;
 
-    // Update DSU and Freeze
-    state.dsu.updateUserScore(sub.userId, delta);
+    const u = state.users.find(x => x.id === sub.userId);
+    const p = state.problems.find(x => x.id === sub.problemId);
+    const userName = sub.userName || (u ? u.username : `User_${sub.userId}`);
+    const problemName = sub.problemName || (p ? p.name : `Problem_${sub.problemId}`);
+
+    // Process submission in freeze engine (evaluates if frozen by state or submission time)
     const update = state.freezeEngine.processJudgedSubmission(
-      sub.userId, `User_${sub.userId}`, sub.problemId, `Problem_${sub.problemId}`, delta, sub.time, "Accepted"
+      sub.userId, userName, sub.problemId, problemName, delta, subTime, verdict
     );
 
-    // If not frozen, update Treap
-    if (!isFrozen) {
-      const u = state.users.find(x => x.id === sub.userId);
-      if (u) {
-        u.score += delta;
-        state.treap.insert(u.score, u.id, u.username);
-        state.segTree.add(u.score, 1);
-      }
+    // If not frozen, apply score change immediately everywhere
+    if (!update.isFrozen && delta !== 0) {
+      applyScoreChange(sub.userId, delta);
     }
 
-    showToast(`Judged Sub #${sub.id}: Accepted (+100 pts)! ${isFrozen ? '[FROZEN]' : ''}`, "success");
+    if (verdict === "Accepted") {
+      showToast(`Judged Sub #${sub.id} (${userName} - ${problemName}): Accepted (+100 pts)! ${update.isFrozen ? '[FROZEN]' : ''}`, "success");
+    } else {
+      showToast(`Judged Sub #${sub.id} (${userName} - ${problemName}): ${verdict} (0 pts). ${update.isFrozen ? '[FROZEN]' : ''}`, "error");
+    }
+
     renderQueue();
     renderLeaderboard();
     renderTeams();
@@ -441,7 +573,10 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
         <h3 style="margin: 0.5rem 0 0.25rem 0; font-size:1.15rem;">${t.name}</h3>
         <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.6rem;">
-          Members (${t.members.length}): ${t.members.map(m => `User #${m}`).join(", ")}
+          Members (${t.members.length}): ${t.members.map(m => {
+            const u = state.users.find(x => x.id === m);
+            return u ? u.username : `User #${m}`;
+          }).join(", ")}
         </p>
         <span style="font-size:0.75rem; color:var(--accent-cyan);">DSU Root: Node ${t.rootId}</span>
       `;
@@ -512,6 +647,19 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("No pending frozen updates remaining to reveal!", "info");
       return;
     }
+
+    // Check old rank before applying score change
+    const u = state.users.find(x => x.id === update.userId);
+    const oldRank = u ? state.treap.rank(u.score, u.id) : -1;
+
+    // Apply the revealed score change everywhere
+    if (update.deltaScore !== 0) {
+      applyScoreChange(update.userId, update.deltaScore);
+    }
+
+    // Check new rank after applying score change
+    const newRank = u ? state.treap.rank(u.score, u.id) : -1;
+
     if (box) {
       box.style.display = "block";
       box.innerHTML = `
@@ -522,6 +670,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <div style="font-size:1.2rem; font-weight:700; color:var(--accent-emerald);">
           Score: ${update.oldPublicScore} &rarr; ${update.newPublicScore} pts (+${update.deltaScore} pts)
         </div>
+        <div style="font-size:1rem; font-weight:600; color:var(--accent-cyan); margin-top:0.4rem;">
+          Rank Climb: #${oldRank} &rarr; #${newRank}
+        </div>
         <p style="color:var(--text-dim); margin-top:0.4rem;">
           Pending updates remaining in queue: ${state.freezeEngine.pendingQueue.length}
         </p>
@@ -530,6 +681,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(`Revealed update for ${update.userName}!`, "success");
     renderLeaderboard();
     renderTeams();
+    updateHeroStats();
   });
 
   // Reveal All Button
@@ -539,7 +691,13 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("No pending updates to reveal!", "info");
       return;
     }
-    state.freezeEngine.revealAll();
+    const revealedList = state.freezeEngine.revealAll();
+    revealedList.forEach(item => {
+      if (item.deltaScore !== 0) {
+        applyScoreChange(item.userId, item.deltaScore);
+      }
+    });
+
     const box = document.getElementById("revealDisplayBox");
     if (box) {
       box.style.display = "block";
@@ -551,6 +709,7 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(`Revealed all ${count} pending updates!`, "success");
     renderLeaderboard();
     renderTeams();
+    updateHeroStats();
   });
 
   // -------------------------------------------------------------------
@@ -568,12 +727,257 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  // Live in-browser benchmark runner
+  document.getElementById("btnRunBenchmark")?.addEventListener("click", () => {
+    const btn = document.getElementById("btnRunBenchmark");
+    if (btn) {
+      btn.innerText = "⏳ Running Live...";
+      btn.disabled = true;
+    }
+
+    setTimeout(() => {
+      // 1. Treap: 5,000 inserts + 1,000 rank queries vs Sorted Array
+      const scores = Array.from({ length: 5000 }, () => Math.floor(Math.random() * 10000));
+      const t = new window.Treap();
+      const t0 = performance.now();
+      for (let i = 0; i < 5000; i++) {
+        t.insert(scores[i], i + 1, "User_" + (i + 1));
+      }
+      for (let i = 0; i < 1000; i++) {
+        t.rank(scores[i], i + 1);
+      }
+      const treapTime = performance.now() - t0;
+
+      const arr = [];
+      const p0 = performance.now();
+      for (let i = 0; i < 5000; i++) {
+        arr.push({ score: scores[i], id: i + 1 });
+        arr.sort((a, b) => b.score - a.score || a.id - b.id);
+      }
+      for (let i = 0; i < 1000; i++) {
+        const targetScore = scores[i];
+        const targetId = i + 1;
+        arr.findIndex(x => x.score === targetScore && x.id === targetId);
+      }
+      const plainTime1 = performance.now() - p0;
+      const speedup1 = (plainTime1 / Math.max(treapTime, 0.01)).toFixed(1);
+
+      // 2. BinomialHeap: 2,000 inserts + extractMin vs Plain Array linear search
+      const items = Array.from({ length: 2000 }, (_, i) => ({
+        id: i + 1,
+        time: Math.floor(Math.random() * 5000),
+        problemId: 1
+      }));
+      const bh = new window.BinomialHeap('time');
+      const b0 = performance.now();
+      for (let i = 0; i < 2000; i++) {
+        bh.insert(items[i]);
+      }
+      for (let i = 0; i < 2000; i++) {
+        bh.extractMin();
+      }
+      const heapTime = performance.now() - b0;
+
+      const list = [];
+      const a0 = performance.now();
+      for (let i = 0; i < 2000; i++) {
+        list.push(items[i]);
+      }
+      for (let i = 0; i < 2000; i++) {
+        let minIdx = 0;
+        for (let j = 1; j < list.length; j++) {
+          if (list[j].time < list[minIdx].time) minIdx = j;
+        }
+        list.splice(minIdx, 1);
+      }
+      const plainTime2 = performance.now() - a0;
+      const speedup2 = (plainTime2 / Math.max(heapTime, 0.01)).toFixed(1);
+
+      // 3. DSU: 20,000 find operations vs Naive parent chain
+      const dsu = new window.DisjointSetUnion();
+      for (let i = 1; i <= 1000; i++) dsu.makeSet(i);
+      for (let i = 1; i < 1000; i++) dsu.unionSets(i, i + 1);
+
+      const d0 = performance.now();
+      for (let i = 0; i < 20000; i++) {
+        dsu.find((i % 1000) + 1);
+      }
+      const dsuTime = performance.now() - d0;
+
+      const parent = {};
+      for (let i = 1; i <= 1000; i++) parent[i] = i - 1;
+      parent[1] = 1;
+      function naiveFind(u) {
+        while (parent[u] !== u) u = parent[u];
+        return u;
+      }
+      const n0 = performance.now();
+      for (let i = 0; i < 20000; i++) {
+        naiveFind((i % 1000) + 1);
+      }
+      const naiveTime = performance.now() - n0;
+      const speedup3 = (naiveTime / Math.max(dsuTime, 0.01)).toFixed(1);
+
+      // Update benchmark table
+      const tbody = document.getElementById("benchmarkBody");
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td>Treap (5k Inserts + 1k Ranks)</td>
+            <td>5,000 / 1,000</td>
+            <td style="color:var(--accent-emerald)">${treapTime.toFixed(3)} ms</td>
+            <td>${plainTime1.toFixed(3)} ms</td>
+            <td><strong style="color:var(--accent-purple)">${speedup1}x</strong></td>
+            <td>O(log N) vs O(N log N) / O(N)</td>
+          </tr>
+          <tr>
+            <td>Binomial Heap (2k Inserts + 2k ExtractMin)</td>
+            <td>2,000</td>
+            <td style="color:var(--accent-emerald)">${heapTime.toFixed(3)} ms</td>
+            <td>${plainTime2.toFixed(3)} ms</td>
+            <td><strong style="color:var(--accent-purple)">${speedup2}x</strong></td>
+            <td>O(log N) vs O(N) linear search</td>
+          </tr>
+          <tr>
+            <td>DSU Find Operations (Path Compression)</td>
+            <td>20,000</td>
+            <td style="color:var(--accent-emerald)">${dsuTime.toFixed(3)} ms</td>
+            <td>${naiveTime.toFixed(3)} ms</td>
+            <td><strong style="color:var(--accent-purple)">${speedup3}x</strong></td>
+            <td>O(α(N)) vs O(N) chain walk</td>
+          </tr>
+        `;
+      }
+
+      const note = document.getElementById("benchmarkNote");
+      if (note) {
+        note.innerHTML = `<em>Note: Live JavaScript benchmark completed in ${((treapTime + plainTime1 + heapTime + plainTime2 + dsuTime + naiveTime) / 1000).toFixed(2)}s. Initial numbers were C++ results from the backend run.</em>`;
+      }
+
+      if (btn) {
+        btn.innerText = "⚡ Run Live Benchmark";
+        btn.disabled = false;
+      }
+      showToast("Live benchmark completed!", "success");
+    }, 50);
+  });
+
+  // -------------------------------------------------------------------
+  // TAB 8: ADS VISUALIZER (AVL Tree SVG layout)
+  // -------------------------------------------------------------------
+  function renderVisualizer() {
+    const container = document.getElementById("visualizerSvgContainer");
+    if (!container) return;
+
+    const root = state.avlTree.root;
+    if (!root) {
+      container.innerHTML = `<p style="color:var(--text-dim); padding:2rem;">(AVL Tree is currently empty)</p>`;
+      return;
+    }
+
+    // In-order traversal to calculate X position and depth for Y position
+    let orderIndex = 0;
+    let maxDepth = 0;
+    const nodeData = new Map();
+
+    function annotate(node, depth = 0) {
+      if (!node) return;
+      maxDepth = Math.max(maxDepth, depth);
+      annotate(node.left, depth + 1);
+      orderIndex++;
+      nodeData.set(node, { xIndex: orderIndex, depth: depth });
+      annotate(node.right, depth + 1);
+    }
+    annotate(root, 0);
+
+    const xSpacing = 72;
+    const ySpacing = 85;
+    const paddingX = 40;
+    const paddingY = 45;
+    const totalWidth = Math.max(850, (orderIndex + 1) * xSpacing + paddingX * 2);
+    const totalHeight = (maxDepth + 1) * ySpacing + paddingY * 2;
+
+    let svgLines = "";
+    let svgNodes = "";
+
+    function renderNode(node) {
+      if (!node) return;
+      const data = nodeData.get(node);
+      const x = paddingX + data.xIndex * xSpacing;
+      const y = paddingY + data.depth * ySpacing;
+
+      // Draw connection lines to children
+      if (node.left) {
+        const leftData = nodeData.get(node.left);
+        const lx = paddingX + leftData.xIndex * xSpacing;
+        const ly = paddingY + leftData.depth * ySpacing;
+        svgLines += `<line x1="${x}" y1="${y}" x2="${lx}" y2="${ly}" stroke="#cbd5e1" stroke-width="2"/>`;
+        renderNode(node.left);
+      }
+      if (node.right) {
+        const rightData = nodeData.get(node.right);
+        const rx = paddingX + rightData.xIndex * xSpacing;
+        const ry = paddingY + rightData.depth * ySpacing;
+        svgLines += `<line x1="${x}" y1="${y}" x2="${rx}" y2="${ry}" stroke="#cbd5e1" stroke-width="2"/>`;
+        renderNode(node.right);
+      }
+
+      // Balance factor
+      const bf = state.avlTree.balance(node);
+      let bfColor = "#16a34a"; // 0 is balanced
+      if (bf !== 0) bfColor = "#d97706"; // -1 or 1
+
+      const shortName = node.problem.name.length > 11 ? node.problem.name.slice(0, 9) + '..' : node.problem.name;
+
+      svgNodes += `
+        <g class="tree-node">
+          <circle cx="${x}" cy="${y}" r="22" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+          <text x="${x}" y="${y + 5}" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="700" font-family="'JetBrains Mono',monospace">${node.problem.difficulty}</text>
+          <text x="${x}" y="${y - 28}" text-anchor="middle" fill="#475569" font-size="10" font-weight="500" font-family="'Outfit',sans-serif">#${node.problem.id} ${shortName}</text>
+          <text x="${x}" y="${y + 36}" text-anchor="middle" fill="${bfColor}" font-size="10" font-weight="600" font-family="'JetBrains Mono',monospace">BF:${bf}</text>
+        </g>
+      `;
+    }
+    renderNode(root);
+
+    container.innerHTML = `
+      <svg width="${totalWidth}" height="${totalHeight}" viewBox="0 0 ${totalWidth} ${totalHeight}" style="display:inline-block; max-width:100%;">
+        ${svgLines}
+        ${svgNodes}
+      </svg>
+    `;
+  }
+
+  document.getElementById("btnRedrawVisualizer")?.addEventListener("click", () => {
+    renderVisualizer();
+    showToast("AVL Tree visualizer redrawn!", "info");
+  });
+
+  // Dynamic dropdown helpers
+  function populateContestantSelect() {
+    const sel = document.getElementById("modalUserId");
+    if (!sel) return;
+    sel.innerHTML = state.users.map(u => {
+      const teamName = state.dsu.getTeamName(u.id);
+      return `<option value="${u.id}">${u.username} (${teamName})</option>`;
+    }).join("");
+  }
+
+  function populatePlagiarismSelect() {
+    const sel = document.getElementById("plagiarismProbSelect");
+    if (!sel) return;
+    sel.innerHTML = state.problems.map(p => {
+      return `<option value="${p.id}">#${p.id} - ${p.name} (Diff: ${p.difficulty})</option>`;
+    }).join("");
+  }
+
   // Modal Submit Handlers
   function openSubmitModal(pId, pName) {
     const modal = document.getElementById("submitModal");
     if (!modal) return;
     document.getElementById("modalProblemName").innerText = `#${pId} - ${pName}`;
     document.getElementById("modalProblemId").value = pId;
+    populateContestantSelect();
     modal.classList.add("active");
   }
 
@@ -584,6 +988,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnConfirmSubmit")?.addEventListener("click", () => {
     const pId = parseInt(document.getElementById("modalProblemId").value);
     const uId = parseInt(document.getElementById("modalUserId").value) || 1;
+    const verdict = document.getElementById("modalVerdict")?.value || "Accepted";
     const code = document.getElementById("modalCodeText").value || "cout << 42;";
     const time = parseInt(document.getElementById("modalContestTime").value) || 100;
 
@@ -595,18 +1000,23 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    const u = state.users.find(x => x.id === uId);
+    const p = state.problems.find(x => x.id === pId);
+
     const sub = {
       id: state.submissions.length + 1,
       userId: uId,
+      userName: u ? u.username : `User_${uId}`,
       problemId: pId,
+      problemName: p ? p.name : `Problem_${pId}`,
       time: time,
-      verdict: "Accepted",
+      verdict: verdict,
       code: code
     };
     state.submissions.push(sub);
     state.binomialHeap.insert(sub);
 
-    showToast(`Submission #${sub.id} queued into Binomial Heap!`, "success");
+    showToast(`Submission #${sub.id} (${verdict}) queued into Binomial Heap!`, "success");
     document.getElementById("submitModal")?.classList.remove("active");
     renderQueue();
     updateHeroStats();

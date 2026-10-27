@@ -47,11 +47,12 @@ CodeRank is an enterprise-grade competitive programming and contest judging plat
 │   └── submissions.csv            # Contest submission logs
 │
 ├── frontend/                      # Modern Dark Glassmorphic Web Application
-│   ├── index.html                 # Responsive Single-Page Application (7 Tabs)
+│   ├── index.html                 # Responsive Single-Page Application (8 Tabs)
 │   ├── css/
 │   │   └── style.css              # Custom responsive glassmorphism styles
 │   └── js/
-│       ├── coderank_engine.js     # Client-side simulator of all ADS algorithms
+│       ├── coderank_engine.js     # Client-side JavaScript implementation of all ADS algorithms
+│       ├── data.js                # Standalone database copy for direct file:// browser access
 │       └── app.js                 # UI controller, event bindings, and toast notifications
 │
 ├── tests/                         # Unit & Master Integration Test Suites
@@ -63,9 +64,9 @@ CodeRank is an enterprise-grade competitive programming and contest judging plat
 ├── scripts/                       # Cross-Platform Build & Execution Automations
 │   ├── build.bat                  # Windows compilation script
 │   ├── run_tests.bat              # Windows test suite runner
-│   ├── start_frontend.bat         # Windows web app launcher
-│   ├── build.sh                   # Linux / macOS compilation script
-│   ├── run_tests.sh               # Linux / macOS test runner
+│   ├── start_frontend.bat         # Windows web app launcher (Python HTTP server)
+│   ├── build.sh                   # Linux / macOS compilation script (LF line endings)
+│   ├── run_tests.sh               # Linux / macOS test runner (LF line endings)
 │   └── run_demo.cpp               # Standalone interactive demo launcher
 │
 └── algorithm/                     # Comprehensive ADS Mathematical & Complexity Docs
@@ -91,45 +92,42 @@ CodeRank is an enterprise-grade competitive programming and contest judging plat
 | **Treap** (Cartesian Tree) | Member 1 | Dynamic rank-by-score & position queries | $\mathcal{O}(\log n)$ expected |
 | **Segment Tree** | Member 1 | Range score aggregations & batch updates | $\mathcal{O}(\log n)$ query / update |
 | **Top-K Min-Heap** | Member 1 | Tracking the real-time top $K$ competitors | $\mathcal{O}(\log K)$ insertion |
-| **AVL Tree** | Member 2 | Self-balancing problem catalog indexing | $\mathcal{O}(\log n)$ search / insert |
-| **Trie** (Prefix Tree) | Member 2 | Fast prefix search & tag autocompletion | $\mathcal{O}(L)$ string length |
-| **Knuth-Morris-Pratt (KMP)**| Member 2 | Substring search across problem descriptions| $\mathcal{O}(N + M)$ linear |
+| **AVL Tree** | Member 2 | Self-balancing problem catalog indexing | $\mathcal{O}(\log n)$ search / insert / delete |
+| **Trie** (Prefix Tree) | Member 2 | Fast prefix search & autocomplete | $\mathcal{O}(L)$ string length |
+| **Knuth-Morris-Pratt (KMP)**| Member 2 | Code plagiarism substring matching | $\mathcal{O}(N + M)$ linear |
 | **Binomial Heap** | Member 3 | Priority submission queue with $O(\log n)$ merge | $\mathcal{O}(\log n)$ insert / extract / merge |
-| **Disjoint Set Union (DSU)**| Member 3 | Team formation, merge requests, cycle detection | $\mathcal{O}(\alpha(n))$ near constant |
+| **Disjoint Set Union (DSU)**| Member 3 | Team formation, merge requests, root scoring | $\mathcal{O}(\alpha(n))$ near constant |
 | **Freeze & Reveal Engine** | Member 3 | ICPC-style scoreboard freezing & unfreezing | $\mathcal{O}(S \log T)$ reveal phase |
 
 ---
 
-## ⚡ Quick Start: Building & Running
+## ⚡ Architecture & Execution Guide
 
-### Windows (Command Prompt / PowerShell)
+CodeRank operates in two complementary layers:
+- **C++ Backend Engine**: The core compiled engine implementing all ADS structures with strict memory management and unit tests. Executed via interactive CLI and compiled test suites.
+- **Client-Side Web Frontend**: A pure vanilla JavaScript (HTML5/CSS3/ES6+, no frameworks, no npm, no build step) re-implementation of the exact same data structures, allowing instructors and students to interactively test ranking, tree rebalancing, judging queues, team unions, and live benchmarks in any browser.
+
+### Running the C++ Backend & Tests
+
+#### Windows (Command Prompt / PowerShell)
 ```cmd
 cd scripts
 build.bat
 run_tests.bat
 ```
-
-To run the interactive unified platform CLI:
+To run the interactive CLI application:
 ```cmd
 cd ..
 coderank.exe
 ```
 
-To launch the web interface:
-```cmd
-cd scripts
-start_frontend.bat
-```
-*(Or simply double click `frontend/index.html` in your web browser)*
-
-### Linux / macOS
+#### Linux / macOS
 ```bash
 cd scripts
 chmod +x build.sh run_tests.sh
 ./build.sh
 ./run_tests.sh
 ```
-
 To run the master binary:
 ```bash
 cd ..
@@ -138,13 +136,29 @@ cd ..
 
 ---
 
-## 🌐 Web Frontend Features
+### Running the Web Frontend
 
-Open `frontend/index.html` in any modern web browser to access:
-1. **Interactive Dashboard**: Live contest metrics, submission volumes, and active teams.
-2. **Problems Catalog**: Searchable via **Trie** autocomplete, full-text filtered via **KMP**, and sorted via **AVL Tree**.
-3. **Judging Queue**: Live interactive **Binomial Heap** queue with priority-based submission processing.
-4. **User Standings**: Powered by **Treap** rank calculations and **Top-K Heap**.
-5. **Team Leaderboard**: Dynamic team affiliations via **Disjoint Set Union (DSU)**.
-6. **ICPC Freeze & Reveal**: Interactive freeze toggle with step-by-step submission reveals and leaderboard animations.
-7. **ADS Visualizer & Benchmarks**: Live interactive visualizations of Binomial Trees, Treap splits/merges, AVL balance factors, and empirical benchmark charts.
+You can launch the web frontend in either of two ways:
+
+1. **Local HTTP Server (Recommended)**:
+   ```cmd
+   cd scripts
+   start_frontend.bat
+   ```
+   This automatically launches Python's HTTP server at `http://localhost:8000` and opens the browser.
+2. **Direct File Open**:
+   Simply open `frontend/index.html` directly in any web browser. The bundled `frontend/js/data.js` ensures full dataset access (16 users, 32 problems, 8 teams) without CORS restrictions.
+
+---
+
+## 🌐 Web Frontend Tabs & Features
+
+The web frontend includes 8 interactive tabs:
+1. 🏆 **Leaderboard**: Live contestant rankings dynamically managed by a **Treap** with $\mathcal{O}(\log n)$ rank lookups, score range distribution counting via **Segment Tree**, Top-K leader filtering via **Min-Heap**, and "What's My Rank?" query dialogs.
+2. 📚 **Problemset**: Problems catalog balanced by difficulty via **AVL Tree**, real-time prefix search via **Trie**, dynamic "Add Problem" form with input validation, and per-card "Delete" button with 4-case AVL rotations.
+3. 🛡️ **Plagiarism Checker**: Multi-file code similarity inspector utilizing the **KMP (Knuth-Morris-Pratt)** pattern matching algorithm to detect code plagiarism with $\ge 30$-character sliding windows.
+4. ⚡ **Judging Queue**: Priority submission queue managed by a **Binomial Heap** (min-heap ordered by contest submission time), featuring peek telemetry and verdict-aware judging (Accepted: +100 pts, Wrong Answer / TLE: 0 pts).
+5. 👥 **Teams & DSU**: Live team standings and dynamic team merges powered by **Disjoint Set Union (DSU)** with Union by Rank and Path Compression, accurately mapping individual member points to team totals.
+6. ❄️ **Freeze & Reveal**: ICPC-style scoreboard freeze mode for the final contest hour with pending submission indicators on the leaderboard, followed by dramatic step-by-step ("Reveal Next") or batch ("Reveal All") rank climb unveilings.
+7. 📊 **ADS Benchmarks**: In-browser live microsecond diagnostics comparing custom ADS against naive implementations (Treap vs Sorted Array, Binomial Heap vs Linear Search, DSU vs Naive Chain Walk) with live speedup factors and backend C++ reference data.
+8. 🌳 **Visualizer**: Dynamic SVG recursive diagram of the problem **AVL Tree**, illustrating node difficulty, parent-child edges, problem names, and real-time balance factors (BF).

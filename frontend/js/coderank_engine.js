@@ -202,6 +202,9 @@ class AVLTree {
   }
 
   insert(problem) {
+    if (typeof problem === 'number') {
+      problem = { id: problem, difficulty: problem, name: "Problem " + problem, category: "General" };
+    }
     const add = (node, p) => {
       if (!node) return new AVLNode(p);
       if (p.difficulty < node.problem.difficulty || (p.difficulty === node.problem.difficulty && p.id < node.problem.id)) {
@@ -231,6 +234,81 @@ class AVLTree {
       return node;
     };
     this.root = add(this.root, problem);
+  }
+
+  delete(problemId, difficulty) {
+    if (typeof problemId === 'object' && problemId !== null) {
+      difficulty = problemId.difficulty;
+      problemId = problemId.id;
+    }
+    let targetId = problemId;
+    let targetDiff = difficulty;
+    if (targetDiff === undefined) {
+      const found = this.listAll().find(p => p.id === targetId || p.difficulty === targetId);
+      if (found) {
+        targetId = found.id;
+        targetDiff = found.difficulty;
+      } else {
+        return false;
+      }
+    }
+
+    const minValueNode = (node) => {
+      let current = node;
+      while (current.left) current = current.left;
+      return current;
+    };
+
+    const remove = (node, id, diff) => {
+      if (!node) return null;
+
+      if (diff < node.problem.difficulty || (diff === node.problem.difficulty && id < node.problem.id)) {
+        node.left = remove(node.left, id, diff);
+      } else if (diff > node.problem.difficulty || (diff === node.problem.difficulty && id > node.problem.id)) {
+        node.right = remove(node.right, id, diff);
+      } else {
+        // Node found: handle 0, 1, or 2 children
+        if (!node.left || !node.right) {
+          node = node.left || node.right;
+        } else {
+          // 2 children: get inorder successor (min node in right subtree)
+          const successor = minValueNode(node.right);
+          node.problem = successor.problem;
+          node.right = remove(node.right, successor.problem.id, successor.problem.difficulty);
+        }
+      }
+
+      if (!node) return null;
+
+      // Update height
+      node.height = Math.max(this.height(node.left), this.height(node.right)) + 1;
+      const bal = this.balance(node);
+
+      // Rebalance with all 4 rotation cases
+      // Left Left Case
+      if (bal > 1 && this.balance(node.left) >= 0) {
+        return this.rightRotate(node);
+      }
+      // Left Right Case
+      if (bal > 1 && this.balance(node.left) < 0) {
+        node.left = this.leftRotate(node.left);
+        return this.rightRotate(node);
+      }
+      // Right Right Case
+      if (bal < -1 && this.balance(node.right) <= 0) {
+        return this.leftRotate(node);
+      }
+      // Right Left Case
+      if (bal < -1 && this.balance(node.right) > 0) {
+        node.right = this.rightRotate(node.right);
+        return this.leftRotate(node);
+      }
+
+      return node;
+    };
+
+    this.root = remove(this.root, targetId, targetDiff);
+    return true;
   }
 
   listInRange(minDiff, maxDiff) {
@@ -300,6 +378,33 @@ class Trie {
     };
     dfs(curr);
     return results;
+  }
+
+  delete(word) {
+    if (!word) return false;
+    const lower = word.toLowerCase();
+    const removeHelper = (node, depth) => {
+      if (!node) return false;
+      if (depth === lower.length) {
+        if (!node.isEndOfWord) return false;
+        node.isEndOfWord = false;
+        node.originalWord = "";
+        return Object.keys(node.children).length === 0;
+      }
+      const ch = lower[depth];
+      if (!node.children[ch]) return false;
+      const shouldDeleteChild = removeHelper(node.children[ch], depth + 1);
+      if (shouldDeleteChild) {
+        delete node.children[ch];
+        return !node.isEndOfWord && Object.keys(node.children).length === 0;
+      }
+      return false;
+    };
+    return removeHelper(this.root, 0);
+  }
+
+  remove(word) {
+    return this.delete(word);
   }
 }
 
