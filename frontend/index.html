@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeRank - Advanced Data Structures Competitive Platform</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="logo-badge">CR</div>
+      <div class="brand-text">
+        <h1>CodeRank</h1>
+        <p>Advanced Data Structures Platform</p>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <button class="nav-tab active" data-tab="tab-leaderboard">🏆 Leaderboard</button>
+      <button class="nav-tab" data-tab="tab-problemset">📚 Problemset</button>
+      <button class="nav-tab" data-tab="tab-plagiarism">🛡️ Plagiarism</button>
+      <button class="nav-tab" data-tab="tab-queue">⚡ Judging Queue</button>
+      <button class="nav-tab" data-tab="tab-teams">👥 Teams & DSU</button>
+      <button class="nav-tab" data-tab="tab-freeze">❄️ Freeze & Reveal</button>
+      <button class="nav-tab" data-tab="tab-benchmark">📊 ADS Benchmarks</button>
+    </div>
+
+    <div class="nav-status">
+      <div id="freezeStatusPill" class="status-badge">
+        <span class="pulse-dot"></span>
+        <span>LIVE CONTEST</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+
+    <!-- Hero Stats -->
+    <section class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(139,92,246,0.15); color:var(--accent-purple);">👥</div>
+        <div class="stat-info">
+          <h3 id="statUsers">0</h3>
+          <p>Registered Contestants (Treap)</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(6,182,212,0.15); color:var(--accent-cyan);">📚</div>
+        <div class="stat-info">
+          <h3 id="statProblems">0</h3>
+          <p>Cataloged Problems (AVL Tree)</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(245,158,11,0.15); color:var(--accent-amber);">⚡</div>
+        <div class="stat-info">
+          <h3 id="statQueue">0</h3>
+          <p>Pending Submissions (Binomial Heap)</p>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:rgba(16,185,129,0.15); color:var(--accent-emerald);">🏆</div>
+        <div class="stat-info">
+          <h3 id="statTeams">0</h3>
+          <p>Active Teams (DSU)</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: LEADERBOARD (MEMBER 1) -->
+    <div id="tab-leaderboard" class="tab-pane">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Live Leaderboard Standings</h2>
+            <span class="ads-tag">Treap + Segment Tree + Top-K Heap</span>
+          </div>
+          <div class="panel-actions">
+            <button id="btnCheckRank" class="btn btn-primary">🔍 What's My Rank?</button>
+            <select id="selectTopK" class="select-custom">
+              <option value="0">All Contestants</option>
+              <option value="3">Top 3 (Heap)</option>
+              <option value="5">Top 5 (Heap)</option>
+              <option value="10">Top 10 (Heap)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Segment Tree Range Filter -->
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:1rem; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div id="segTreeSummary" style="font-size:0.88rem; color:var(--text-muted);">
+            Segment Tree Query: Counting score distribution across bounds...
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="number" id="rangeMinScore" class="search-input" placeholder="Min Score (e.g. 1500)" style="width:140px; padding-left:0.85rem;" value="1000">
+            <span style="color:var(--text-dim);">-</span>
+            <input type="number" id="rangeMaxScore" class="search-input" placeholder="Max Score (e.g. 3500)" style="width:140px; padding-left:0.85rem;" value="4000">
+            <button id="btnApplyScoreRange" class="btn btn-secondary">Filter Range</button>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Contestant</th>
+                <th>Rank Tier</th>
+                <th>Score</th>
+                <th>Team</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboardBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: PROBLEMSET (MEMBER 2) -->
+    <div id="tab-problemset" class="tab-pane" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Problem Catalog</h2>
+            <span class="ads-tag">AVL Tree + Trie Autocomplete</span>
+          </div>
+          <div class="panel-actions">
+            <!-- Trie Autocomplete Input -->
+            <div class="input-group">
+              <span class="input-icon">🔍</span>
+              <input type="text" id="searchProblemInput" class="search-input" placeholder="Autocomplete problem (Trie)..." autocomplete="off">
+              <div id="probAutocomplete" class="autocomplete-list"></div>
+            </div>
+            <!-- AVL Difficulty Filter -->
+            <input type="number" id="minDiffInput" class="search-input" placeholder="Min Diff (800)" style="width:120px; padding-left:0.85rem;" value="800">
+            <input type="number" id="maxDiffInput" class="search-input" placeholder="Max Diff (3500)" style="width:120px; padding-left:0.85rem;" value="3500">
+            <button id="btnFilterDiff" class="btn btn-primary">Filter AVL Range</button>
+          </div>
+        </div>
+
+        <div id="problemsGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: PLAGIARISM CHECKER (MEMBER 2) -->
+    <div id="tab-plagiarism" class="tab-pane" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Code Plagiarism Inspector</h2>
+            <span class="ads-tag">Knuth-Morris-Pratt (KMP) Algorithm</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+          <div>
+            <div class="form-group">
+              <label>Select Target Problem:</label>
+              <select id="plagiarismProbSelect" class="select-custom" style="width:100%;">
+                <option value="1">#1 - Watermelon (Diff: 800)</option>
+                <option value="2">#2 - Way Too Long Words (Diff: 800)</option>
+                <option value="4">#4 - Next Round (Diff: 900)</option>
+                <option value="29">#29 - Dynamic Shortest Path (Diff: 2800)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Source Code to Inspect:</label>
+              <textarea id="plagiarismCodeInput" class="form-control" style="min-height:180px;" placeholder="Paste C++ or Python code to check against stored solutions..."></textarea>
+            </div>
+            <button id="btnRunPlagiarismScan" class="btn btn-primary" style="width:100%;">
+              🔍 Run KMP Plagiarism Scan
+            </button>
+          </div>
+
+          <div>
+            <label style="display:block; font-size:0.82rem; font-weight:600; color:var(--text-muted); margin-bottom:0.45rem; text-transform:uppercase;">Scan Telemetry & Diagnostics:</label>
+            <div id="plagiarismResultBox" style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:1.25rem; min-height:240px;">
+              <p style="color:var(--text-dim);">Paste submission code and click "Run KMP Plagiarism Scan". The engine constructs LPS prefix arrays and scans across all historical submissions for Problem matches with sliding windows &ge; 30 characters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: JUDGING & QUEUE (MEMBER 3) -->
+    <div id="tab-queue" class="tab-pane" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Submission Queue & Judging Engine</h2>
+            <span class="ads-tag">Binomial Heap Min-Queue</span>
+          </div>
+          <div class="panel-actions">
+            <button id="btnJudgeNext" class="btn btn-primary">⚖️ Judge Next (Extract-Min)</button>
+          </div>
+        </div>
+
+        <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:var(--radius-sm); padding:1rem; margin-bottom:1.5rem;">
+          <div id="nextJudgedSub" style="color:var(--text-main); font-size:0.95rem;">
+            Queue inspection loading...
+          </div>
+        </div>
+
+        <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-muted);">Current Heap Order:</h3>
+        <div id="queueList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: TEAMS & DSU (MEMBER 3) -->
+    <div id="tab-teams" class="tab-pane" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Teams & Standings</h2>
+            <span class="ads-tag">Disjoint Set Union (DSU)</span>
+          </div>
+        </div>
+
+        <!-- DSU Union Tool -->
+        <div style="background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.25); border-radius:var(--radius-sm); padding:1.25rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h4 style="color:var(--accent-purple); margin-bottom:0.25rem;">Merge Teams dynamically via DSU:</h4>
+            <p style="font-size:0.82rem; color:var(--text-muted);">Union by Rank + Path Compression automatically consolidates member scores into the root!</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.65rem; flex-wrap:wrap;">
+            <select id="selectTeam1" class="select-custom"></select>
+            <span style="color:var(--text-dim); font-weight:700;">+</span>
+            <select id="selectTeam2" class="select-custom"></select>
+            <button id="btnMergeTeams" class="btn btn-primary">Merge Sets</button>
+          </div>
+        </div>
+
+        <div id="teamsGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: FREEZE & REVEAL (MEMBER 3) -->
+    <div id="tab-freeze" class="tab-pane" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>Contest Freeze & Dramatic Reveal</h2>
+            <span class="ads-tag">ICPC Scoreboard Engine</span>
+          </div>
+          <div class="panel-actions">
+            <button id="btnToggleFreeze" class="btn btn-secondary">Enable Freeze Mode</button>
+            <button id="btnRevealNext" class="btn btn-primary">⚡ Reveal Next</button>
+            <button id="btnRevealAll" class="btn btn-danger">🎉 Reveal All</button>
+          </div>
+        </div>
+
+        <div id="revealDisplayBox" class="reveal-box" style="display:none;"></div>
+
+        <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); padding:1.5rem;">
+          <h3 style="margin-bottom:0.75rem;">How Freeze & Reveal Works:</h3>
+          <ul style="color:var(--text-muted); font-size:0.9rem; line-height:1.7; padding-left:1.5rem;">
+            <li><strong>During Normal Time:</strong> Submissions are judged live; public leaderboard updates immediately.</li>
+            <li><strong>During Freeze (Last Hour):</strong> Submissions are evaluated in the backend, but public scoreboards withhold changes and display pending marks.</li>
+            <li><strong>During Reveal:</strong> Submissions are unveiled one-by-one with dramatic score adjustments and rank climbs!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 7: BENCHMARK SUITE -->
+    <div id="tab-benchmark" class="tab-pane" style="display:none;">
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <h2>ADS vs Plain Sorted List Benchmarks</h2>
+            <span class="ads-tag">Hardware Microsecond Diagnostics</span>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Operation</th>
+                <th>Dataset Size</th>
+                <th>Custom ADS (ms)</th>
+                <th>Plain List (ms)</th>
+                <th>Speedup</th>
+                <th>Theoretical Complexity</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarkBody">
+              <!-- Populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Submit Code Modal -->
+  <div id="submitModal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalProblemName">Submit Solution</h3>
+        <button id="btnCloseSubmitModal" class="btn-close">&times;</button>
+      </div>
+      <input type="hidden" id="modalProblemId">
+      
+      <div class="form-group">
+        <label>Submitting Contestant:</label>
+        <select id="modalUserId" class="select-custom" style="width:100%;">
+          <option value="1">tourist (Team RedSector)</option>
+          <option value="2">Petr (Team RedSector)</option>
+          <option value="3">Benq (Team MIT_Alums)</option>
+          <option value="4">ecnerwala (Team MIT_Alums)</option>
+          <option value="9">tanushka (Team CodeRankTeam)</option>
+          <option value="16">nandini (Team CodeRankTeam)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Contest Time (Minutes):</label>
+        <input type="number" id="modalContestTime" class="form-control" value="120">
+      </div>
+
+      <div class="form-group">
+        <label>Source Code (C++):</label>
+        <textarea id="modalCodeText" class="form-control" placeholder="#include <iostream>..."></textarea>
+      </div>
+
+      <button id="btnConfirmSubmit" class="btn btn-primary" style="width:100%; margin-top:0.75rem;">
+        Queue Submission into Binomial Heap
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <script src="js/coderank_engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
