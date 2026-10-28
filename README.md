@@ -385,7 +385,7 @@ CodeRank provides eight interactive sections.
 
 ### 1. Leaderboard
 
-Uses a Treap for dynamic rankings, a Segment Tree for score range queriesand a Min-Heap for Top-K retrieval.
+Uses a Treap for dynamic rankings, a Segment Tree for score range queries and a Min-Heap for Top-K retrieval.
 
 **Features**
 
@@ -461,7 +461,7 @@ Compares selected advanced data structures against simpler baseline implementati
 - Execution-time measurements.
 - Comparative speedup calculations.
 
-Benchmark results depend on dataset size, implementation detailsand the execution environment.
+Benchmark results depend on dataset size, implementation details and the execution environment.
 
 ### 8. Tree Visualizer
 
@@ -527,7 +527,7 @@ The `algorithm/` directory contains Markdown documentation for the principal alg
 | `freeze_reveal_algorithm.md` | Scoreboard freezing and result revelation |
 | `judging_teams_algorithm.md` | Submission judging and team management |
 
-The documentation supports understanding the algorithm design, implementation, complexityand application of each data structure.
+The documentation supports understanding the algorithm design, implementation, complexity and application of each data structure.
 
 ---
 
@@ -549,8 +549,8 @@ The documentation supports understanding the algorithm design, implementation, c
 
 CodeRank demonstrates how Advanced Data Structures can be applied to the design of an interactive competitive programming platform.
 
-By combining dynamic ranking, balanced search trees, string-processing algorithms, priority queues, disjoint-set operationsand visual benchmarking, the project connects theoretical concepts with practical software development.
+By combining dynamic ranking, balanced search trees, string-processing algorithms, priority queues, disjoint-set operations and visual benchmarking, the project connects theoretical concepts with practical software development.
 
 Its modular architecture enables individual components to be developed and tested independently while supporting integration into a unified platform.
 
-**Project Focus:** Advanced Data Structures, algorithm analysis, modular software design, testingand interactive visualization.
+**Project Focus:** Advanced Data Structures, algorithm analysis, modular software design, testing and interactive visualization.
