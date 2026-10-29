@@ -467,6 +467,7 @@ class KMP {
       // Scan chunks of new code across stored code using KMP
       for (let start = 0; start <= cleanNew.length - chunkLen; start += Math.floor(chunkLen / 2)) {
         const chunk = cleanNew.substr(start, chunkLen);
+        if (chunk.includes('#include') || chunk.includes('using namespace')) continue;
         const matches = this.search(cleanStored, chunk);
         if (matches.length > 0) {
           return {
