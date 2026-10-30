@@ -1,79 +1,556 @@
-# CodeRank
+# CodeRank: Unified Competitive Programming Platform
 
-A competitive-programming contest platform written in C++17. CodeRank manages a live leaderboard, a problem set, a judging queue and teams, and every feature is built on a hand-written data structure rather than the standard library containers.
+CodeRank is a competitive programming platform that integrates **Advanced Data Structures (ADS)** with modern web technologies to provide interactive contest management, dynamic leaderboards, problem searching, submission judging, team management and performance benchmarking.
 
-> **Status:** In development.
+The project combines a modular C++ backend with an interactive web frontend, demonstrating the practical applications of advanced data structures and algorithms in a unified platform.
 
-## Goals
+## Table of Contents
 
-- Implement each core feature on the data structure best suited to it.
-- Keep every module independent, with a small, clean interface.
-- Compare the custom structures against a plain sorted list to show the performance difference.
+- [Project Overview](#project-overview)
+- [Project Architecture](#project-architecture)
+- [Team Contributions](#team-contributions)
+- [Advanced Data Structures and Complexity Analysis](#advanced-data-structures-and-complexity-analysis)
+- [System Architecture](#system-architecture)
+- [Getting Started](#getting-started)
+- [Running the Web Frontend](#running-the-web-frontend)
+- [Web Application Features](#web-application-features)
+- [Testing and Validation](#testing-and-validation)
+- [Algorithm Documentation](#algorithm-documentation)
+- [Technology Stack](#technology-stack)
 
-## Features
+---
 
-**Leaderboard**
-- Add a user or update their score
-- "What is my rank?" lookup
-- Show the top k users
-- Count users between two scores, and find the highest score in a range
+## Project Overview
 
-**Problems and search**
-- Add and remove problems
-- List problems in a difficulty range
-- Prefix autocomplete for usernames and problem names
-- Plagiarism check on submitted code
+CodeRank provides an interactive environment for exploring data structures and algorithms through competitive programming workflows.
 
-**Judging and teams**
-- Submission queue and "judge next submission"
-- Create and merge teams, with team score as the sum of member scores
-- Freeze mode that hides leaderboard updates in the last hour, and a reveal command that applies them
+### Key Objectives
 
-## Data structures and complexity
+- Implement advanced data structures in C++.
+- Apply data structures to practical problems such as ranking, searching and priority-based scheduling.
+- Provide an interactive web interface for exploring algorithm behaviour.
+- Compare advanced data structures with simpler implementations through benchmarking.
+- Maintain modular, testable and reusable code.
 
-| Feature | Structure | Operation | Time complexity |
-|---|---|---|---|
-| Leaderboard rank | Treap (with subtree sizes) | insert, erase, update, rank | O(log n) expected |
-| Score range queries | Segment tree | count in range, max in range | O(log S) |
-| Top-k users | Binary min-heap | top k of n users | O(n log k) |
-| Problem list | AVL tree | insert, delete, search | O(log n) |
-| Problem list | AVL tree | list a difficulty range | O(log n + m) |
-| Autocomplete | Trie | insert, search | O(L) |
-| Autocomplete | Trie | list by prefix | O(L + output) |
-| Plagiarism check | KMP | match pattern in text | O(n + m) |
-| Submission queue | Binomial heap | insert, merge, extract-min | O(log n) |
-| Teams | Disjoint set union | union by rank, find with path compression | O(α(n)) amortized |
-| Freeze and reveal | Pending update queue | reveal f frozen updates | O(f log n) |
+### Core Modules
 
-Symbols: `n` = number of items, `S` = maximum score, `m` = number of results, `L` = length of the string, `f` = number of frozen updates.
+| Module | Purpose |
+|---|---|
+| Ranking and Score Analytics | Dynamic rankings, score queries and Top-K retrieval |
+| Problem Management and Search | Problem indexing, prefix search, autocomplete and pattern matching |
+| Submission Judging and Team Management | Submission queues, team operations and scoreboard management |
 
-## Shared classes
+---
 
-All modules use the same three classes:
+## Project Architecture
 
-```cpp
-struct User       { int id; std::string name; int score; int team; };
-struct Problem    { int id; std::string name; int difficulty; };
-struct Submission { int user; int problem; int time; std::string verdict; };
+```text
+CodeRank/
+├── backend/
+│   ├── include/
+│   │   ├── Models.h
+│   │   ├── common.h
+│   │   ├── treap.h
+│   │   ├── segtree.h
+│   │   ├── topk_heap.h
+│   │   ├── ranking_engine.h
+│   │   ├── AVLTree.h
+│   │   ├── Trie.h
+│   │   ├── KMP.h
+│   │   ├── ProblemService.h
+│   │   ├── binomial_heap.h
+│   │   ├── dsu.h
+│   │   ├── freeze_reveal.h
+│   │   ├── team_leaderboard.h
+│   │   ├── judging_service.h
+│   │   ├── timing_comparison.h
+│   │   └── coderank_platform.h
+│   │
+│   └── src/
+│       ├── AVLTree.cpp
+│       ├── Trie.cpp
+│       ├── KMP.cpp
+│       ├── ProblemService.cpp
+│       ├── judging_service.cpp
+│       ├── timing_comparison.cpp
+│       ├── coderank_platform.cpp
+│       └── main.cpp
+│
+├── database/
+│   ├── schema.sql
+│   ├── seed_data.sql
+│   ├── database.json
+│   ├── users.csv
+│   ├── problems.csv
+│   ├── teams.csv
+│   └── submissions.csv
+│
+├── frontend/
+│   ├── index.html
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       ├── coderank_engine.js
+│       ├── data.js
+│       └── app.js
+│
+├── tests/
+│   ├── test_ranking.cpp
+│   ├── test_problems_search.cpp
+│   ├── test_judging_teams.cpp
+│   └── test_integrated_platform.cpp
+│
+├── scripts/
+│   ├── build.bat
+│   ├── run_tests.bat
+│   ├── start_frontend.bat
+│   ├── build.sh
+│   ├── run_tests.sh
+│   └── run_demo.cpp
+│
+├── algorithm/
+│   ├── treap_algorithm.md
+│   ├── segment_tree_algorithm.md
+│   ├── topk_heap_algorithm.md
+│   ├── ranking_engine_algorithm.md
+│   ├── avl_tree_algorithm.md
+│   ├── trie_algorithm.md
+│   ├── kmp_algorithm.md
+│   ├── binomial_heap_algorithm.md
+│   ├── disjoint_set_union_algorithm.md
+│   ├── freeze_reveal_algorithm.md
+│   └── judging_teams_algorithm.md
+│
+└── README.md
 ```
 
-## Design principles
+### Directory Overview
 
-- Each module exposes a few clean methods (insert, delete, search, plus its own queries) so the main menu can call it without reading the module's code.
-- Each module runs and is tested on its own before it is merged to `main`.
-- Randomized tests compare every structure against a simple brute-force version.
+| Directory | Description |
+|---|---|
+| `backend/` | C++ implementations of data structures, algorithms and platform services |
+| `database/` | SQL schemas, seed data and structured datasets |
+| `frontend/` | Interactive web interface built with HTML, CSS and JavaScript |
+| `tests/` | Unit tests and integration tests |
+| `scripts/` | Build, test and frontend-launch scripts |
+| `algorithm/` | Algorithm explanations and complexity analysis |
 
-## Build and run
+---
 
-Requires a C++17 compiler such as g++.
+## Team Contributions
+
+The project is organized into three functional modules, with each team member responsible for a dedicated set of data structures, algorithms and associated platform features.
+
+### 1. Tanushri - Ranking and Score Analytics
+
+**Data Structures**
+
+- **Treap:** Dynamic leaderboard ranking and rank queries.
+- **Segment Tree:** Score range queries and range updates.
+- **Top-K Min-Heap:** Efficient retrieval of the top K competitors.
+
+**Responsibilities**
+
+- Implement the dynamic ranking engine.
+- Support efficient score queries and leaderboard updates.
+- Optimize Top-K competitor retrieval.
+- Develop unit tests for ranking-related data structures.
+- Integrate ranking components with the unified platform.
+
+### 2. Tanushka - Problem Management and Search
+
+**Data Structures and Algorithms**
+
+- **AVL Tree:** Balanced indexing of programming problems.
+- **Trie:** Prefix-based problem search and autocomplete.
+- **Knuth–Morris–Pratt (KMP):** Efficient string pattern matching.
+
+**Responsibilities**
+
+- Implement balanced problem indexing and search.
+- Develop prefix-search and autocomplete functionality.
+- Integrate KMP-based pattern matching into the code similarity module.
+- Implement problem management operations and input validation.
+- Develop unit tests for problem search and indexing.
+- Integrate problem management components with the unified platform.
+
+### 3. Nandini - Submission Judging and Team Management
+
+**Data Structures and Algorithms**
+
+- **Binomial Heap:** Priority-based submission queue.
+- **Disjoint Set Union (DSU):** Team grouping and merging using path compression and union by rank.
+- **Scoreboard Freeze and Reveal:** ICPC-style contest scoreboard management.
+
+**Responsibilities**
+
+- Implement submission queue management and judging services.
+- Develop team management and dynamic team standings.
+- Implement scoreboard freezing and progressive result revelation.
+- Benchmark heap-based operations against simpler implementations.
+- Develop unit tests for submission judging and team management.
+- Integrate judging and team management components with the unified platform.
+
+### Shared Responsibilities
+
+All team members contribute to:
+
+- Integrating individual modules into the unified platform.
+- Maintaining shared data models and interfaces.
+- Validating interactions between different modules.
+- Running integration tests and resolving compatibility issues.
+- Documenting algorithms, implementation decisions and complexity analysis.
+
+---
+
+## Advanced Data Structures and Complexity Analysis
+
+The following table summarizes the principal data structures used in CodeRank, their applications and their expected time complexities.
+
+| Data Structure / Algorithm | Contributor | Application | Time Complexity |
+|---|---|---|---|
+| Treap | Tanushri | Dynamic ranking and rank queries | Expected O(log n) |
+| Segment Tree | Tanushri | Range queries and updates | O(log n) per operation |
+| Top-K Min-Heap | Tanushri | Top-K competitor retrieval | O(log K) per heap operation |
+| AVL Tree | Tanushka | Problem indexing and search | O(log n) search, insertionand deletion |
+| Trie | Tanushka | Prefix search and autocomplete | O(L) lookup for a key of length L |
+| KMP | Tanushka | String pattern matching | O(N + M) |
+| Binomial Heap | Nandini | Priority queue operations and merging | O(log n) for insertion, extractionand merge |
+| Disjoint Set Union | Nandini | Team grouping and merging | O(α(n)) amortized per operation with path compression and union by rank |
+| Freeze and Reveal Engine | Nandini | Contest scoreboard management | Depends on implementation; O(S log T) for ordered reveal updates |
+
+**Complexity notation**
+
+- `n`: Number of elements.
+- `K`: Number of top-ranked competitors.
+- `L`: Length of the search key.
+- `N`: Length of the input text.
+- `M`: Length of the search pattern.
+- `α(n)`: Inverse Ackermann function.
+- `S`: Number of pending submissions.
+- `T`: Number of teams.
+
+*The stated complexities assume standard implementations and the specified operating conditions. Actual performance depends on implementation details and workload.*
+
+---
+
+## System Architecture
+
+CodeRank consists of two complementary layers: a compiled C++ backend and an interactive browser-based frontend.
+
+### C++ Backend
+
+The backend implements the core data structures, algorithms and platform services.
+
+Its responsibilities include:
+
+- Dynamic ranking and score analytics.
+- Problem indexing and search.
+- Submission queue management and judging.
+- Team management and scoreboard operations.
+- Performance benchmarking.
+- Unit testing and platform integration.
+
+The backend includes an interactive command-line interface for demonstrating the platform's functionality.
+
+### Web Frontend
+
+The frontend provides a visual interface for interacting with the platform's features.
+
+**Technologies:** HTML5, CSS3, vanilla JavaScriptand SVG.
+
+The frontend provides:
+
+- Interactive leaderboards.
+- Problem indexing and prefix-based search.
+- Code similarity analysis.
+- Submission queue demonstrations.
+- Team management and score aggregation.
+- Scoreboard freeze and reveal.
+- In-browser algorithm benchmarking.
+- Dynamic tree visualization.
+
+The frontend includes JavaScript implementations of the core data structures, allowing users to explore algorithm behaviour directly in a browser.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+Ensure the following tools are available:
+
+- A C++ compiler supporting the C++ standard required by the source code.
+- Python 3 for the local frontend server.
+- A modern web browser.
+- Git for version control.
+
+On Windows, use a supported compiler available through your configured development environment. On Linux or macOS, a compatible GCC or Clang installation can be used.
+
+### Building and Running on Windows
+
+Run the following commands from the repository root in Command Prompt or PowerShell.
+
+**Step 1: Build the project and run the tests**
+
+```cmd
+cd scripts
+build.bat
+run_tests.bat
+```
+
+**Step 2: Launch the interactive CLI**
+
+Return to the repository root:
+
+```cmd
+cd ..
+coderank.exe
+```
+
+Ensure that the executable name and output location match the configuration in `build.bat`.
+
+### Building and Running on Linux / macOS
+
+**Step 1: Make the scripts executable**
 
 ```bash
-g++ -std=c++17 -O2 main.cpp -o coderank
-./coderank
+cd scripts
+chmod +x build.sh run_tests.sh
 ```
 
-On Windows, run `.\coderank.exe`.
+**Step 2: Build the project**
 
-## Documentation
+```bash
+./build.sh
+```
 
-Step-by-step algorithm descriptions, with examples and complexity, are kept in the `algorithm/` folder.
+**Step 3: Run the test suites**
+
+```bash
+./run_tests.sh
+```
+
+**Step 4: Launch the interactive CLI**
+
+Return to the repository root:
+
+```bash
+cd ..
+./coderank.out
+```
+
+Ensure that the executable name and output location match the configuration in `build.sh`.
+
+---
+
+## Running the Web Frontend
+
+The frontend can be launched using a local HTTP server or opened directly in a browser.
+
+### Option 1: Local HTTP Server - Recommended
+
+On Windows, run:
+
+```cmd
+cd scripts
+start_frontend.bat
+```
+
+The script is intended to launch a local Python HTTP server at:
+
+```text
+http://localhost:8000
+```
+
+Open this address in your browser if it does not open automatically.
+
+### Option 2: Open Directly in a Browser
+
+Open the following file:
+
+```text
+frontend/index.html
+```
+
+The bundled `frontend/js/data.js` provides a local dataset for standalone demonstrations, subject to the browser's compatibility and the frontend's data-loading implementation.
+
+**Note:** Use the local HTTP server if browser security restrictions prevent scripts or datasets from loading correctly.
+
+---
+
+## Web Application Features
+
+CodeRank provides eight interactive sections.
+
+### 1. Leaderboard
+
+Uses a Treap for dynamic rankings, a Segment Tree for score range queries and a Min-Heap for Top-K retrieval.
+
+**Features**
+
+- Dynamic contestant rankings.
+- Rank lookup queries.
+- Score range analysis.
+- Top-K competitor retrieval.
+
+### 2. Problemset
+
+Uses an AVL Tree for balanced problem indexing and a Trie for prefix-based search.
+
+**Features**
+
+- Problem indexing and lookup.
+- Prefix search and autocomplete.
+- Problem creation with input validation.
+- Problem deletion and AVL rebalancing.
+
+### 3. Plagiarism Checker
+
+Uses the Knuth–Morris–Pratt algorithm to identify matching code fragments.
+
+**Features**
+
+- Multi-file code comparison.
+- Substring pattern matching.
+- Configurable matching-window length.
+
+*Note: KMP detects exact string matches. It does not independently establish plagiarism or identify semantically equivalent code.*
+
+### 4. Judging Queue
+
+Uses a Binomial Heap to manage submissions according to the configured queue priority.
+
+**Features**
+
+- Priority-based submission processing.
+- Queue inspection and priority handling.
+- Submission verdict simulation.
+- Score updates based on configured verdict rules.
+
+### 5. Teams and DSU
+
+Uses Disjoint Set Union with path compression and union by rank to manage team groupings.
+
+**Features**
+
+- Team grouping and merging.
+- Individual-to-team score aggregation.
+- Dynamic team standings.
+
+### 6. Scoreboard Freeze and Reveal
+
+Simulates ICPC-style scoreboard freezing during the final phase of a contest.
+
+**Features**
+
+- Temporary suppression of selected scoreboard updates.
+- Pending submission indicators.
+- Step-by-step result revelation.
+- Batch reveal and ranking updates.
+
+### 7. ADS Benchmarks
+
+Compares selected advanced data structures against simpler baseline implementations.
+
+**Features**
+
+- Treap versus sorted-array operations.
+- Binomial Heap versus linear-search-based priority handling.
+- DSU versus naive chain traversal.
+- Execution-time measurements.
+- Comparative speedup calculations.
+
+Benchmark results depend on dataset size, implementation details and the execution environment.
+
+### 8. Tree Visualizer
+
+Provides an SVG-based visualization of the problem-indexing AVL Tree.
+
+**Features**
+
+- Dynamic node and edge rendering.
+- Problem names and difficulty values.
+- Parent-child relationships.
+- Node balance-factor visualization.
+
+---
+
+## Testing and Validation
+
+CodeRank includes dedicated test suites for individual modules and an integrated platform test suite.
+
+| Test File | Testing Scope | Contributor |
+|---|---|---|
+| `test_ranking.cpp` | Treap, Segment Treeand Top-K Heap | Tanushri |
+| `test_problems_search.cpp` | AVL Tree, Trieand KMP | Tanushka |
+| `test_judging_teams.cpp` | Binomial Heap, DSUand Freeze/Reveal | Nandini |
+| `test_integrated_platform.cpp` | Cross-module integration | All team members |
+
+### Running the Tests
+
+**Windows**
+
+```cmd
+cd scripts
+run_tests.bat
+```
+
+**Linux / macOS**
+
+```bash
+cd scripts
+./run_tests.sh
+```
+
+The test suites are designed to validate individual data structure operations and interactions between platform modules.
+
+Actual test coverage and passing results should be confirmed by running the test scripts.
+
+---
+
+## Algorithm Documentation
+
+The `algorithm/` directory contains Markdown documentation for the principal algorithms implemented in CodeRank.
+
+| Documentation File | Topic |
+|---|---|
+| `treap_algorithm.md` | Treap operations and dynamic ranking |
+| `segment_tree_algorithm.md` | Segment Tree queries and updates |
+| `topk_heap_algorithm.md` | Top-K retrieval using a Min-Heap |
+| `ranking_engine_algorithm.md` | Dynamic ranking engine |
+| `avl_tree_algorithm.md` | AVL Tree operations and balancing |
+| `trie_algorithm.md` | Prefix search and autocomplete |
+| `kmp_algorithm.md` | Knuth–Morris–Pratt pattern matching |
+| `binomial_heap_algorithm.md` | Binomial Heap operations |
+| `disjoint_set_union_algorithm.md` | DSU, union by rankand path compression |
+| `freeze_reveal_algorithm.md` | Scoreboard freezing and result revelation |
+| `judging_teams_algorithm.md` | Submission judging and team management |
+
+The documentation supports understanding the algorithm design, implementation, complexity and application of each data structure.
+
+---
+
+## Technology Stack
+
+| Category | Technologies |
+|---|---|
+| Backend | C++ |
+| Frontend | HTML5, CSS3, JavaScript |
+| Visualization | SVG |
+| Database and Data Storage | SQL, JSON, CSV |
+| Testing | C++ unit tests and integration tests |
+| Build Automation | Windows batch scripts, Bash |
+| Local Development | Python HTTP server |
+
+---
+
+## Conclusion
+
+CodeRank demonstrates how Advanced Data Structures can be applied to the design of an interactive competitive programming platform.
+
+By combining dynamic ranking, balanced search trees, string-processing algorithms, priority queues, disjoint-set operations and visual benchmarking, the project connects theoretical concepts with practical software development.
+
+Its modular architecture enables individual components to be developed and tested independently while supporting integration into a unified platform.
+
+**Project Focus:** Advanced Data Structures, algorithm analysis, modular software design, testing and interactive visualization.
