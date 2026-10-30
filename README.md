@@ -8,7 +8,7 @@ The project combines a modular C++ backend with an interactive web frontend, dem
 
 - [Project Overview](#project-overview)
 - [Project Architecture](#project-architecture)
-- [Team Contributions](#team-contributions)
+- [Contributors](#contributors)
 - [Advanced Data Structures and Complexity Analysis](#advanced-data-structures-and-complexity-analysis)
 - [System Architecture](#system-architecture)
 - [Getting Started](#getting-started)
@@ -137,69 +137,15 @@ CodeRank/
 
 ---
 
-## Team Contributions
+## Contributors
 
-The project is organized into three functional modules, with each team member responsible for a dedicated set of data structures, algorithms and associated platform features.
+| Contributor | Contribution |
+|-------------|-------------|
+| **Tanushri Jadhav** | Treap, Segment Tree, Top-K Min-Heap, Dynamic Ranking Engine, Score Analytics, Ranking Unit Tests |
+| **Tanushka Gulhane** | AVL Tree, Trie, KMP Pattern Matching, Problem Management & Search, Input Validation, Search Unit Tests |
+| **Nandini** | Binomial Heap, Disjoint Set Union, Freeze & Reveal Scoreboard, Judging Service, Team Management, Benchmarking |
 
-### 1. Tanushri - Ranking and Score Analytics
-
-**Data Structures**
-
-- **Treap:** Dynamic leaderboard ranking and rank queries.
-- **Segment Tree:** Score range queries and range updates.
-- **Top-K Min-Heap:** Efficient retrieval of the top K competitors.
-
-**Responsibilities**
-
-- Implement the dynamic ranking engine.
-- Support efficient score queries and leaderboard updates.
-- Optimize Top-K competitor retrieval.
-- Develop unit tests for ranking-related data structures.
-- Integrate ranking components with the unified platform.
-
-### 2. Tanushka - Problem Management and Search
-
-**Data Structures and Algorithms**
-
-- **AVL Tree:** Balanced indexing of programming problems.
-- **Trie:** Prefix-based problem search and autocomplete.
-- **Knuth–Morris–Pratt (KMP):** Efficient string pattern matching.
-
-**Responsibilities**
-
-- Implement balanced problem indexing and search.
-- Develop prefix-search and autocomplete functionality.
-- Integrate KMP-based pattern matching into the code similarity module.
-- Implement problem management operations and input validation.
-- Develop unit tests for problem search and indexing.
-- Integrate problem management components with the unified platform.
-
-### 3. Nandini - Submission Judging and Team Management
-
-**Data Structures and Algorithms**
-
-- **Binomial Heap:** Priority-based submission queue.
-- **Disjoint Set Union (DSU):** Team grouping and merging using path compression and union by rank.
-- **Scoreboard Freeze and Reveal:** ICPC-style contest scoreboard management.
-
-**Responsibilities**
-
-- Implement submission queue management and judging services.
-- Develop team management and dynamic team standings.
-- Implement scoreboard freezing and progressive result revelation.
-- Benchmark heap-based operations against simpler implementations.
-- Develop unit tests for submission judging and team management.
-- Integrate judging and team management components with the unified platform.
-
-### Shared Responsibilities
-
-All team members contribute to:
-
-- Integrating individual modules into the unified platform.
-- Maintaining shared data models and interfaces.
-- Validating interactions between different modules.
-- Running integration tests and resolving compatibility issues.
-- Documenting algorithms, implementation decisions and complexity analysis.
+**Shared responsibilities:** platform integration, shared data models and interfaces, integration testing and algorithm documentation.
 
 ---
 
@@ -212,10 +158,10 @@ The following table summarizes the principal data structures used in CodeRank, t
 | Treap | Tanushri | Dynamic ranking and rank queries | Expected O(log n) |
 | Segment Tree | Tanushri | Range queries and updates | O(log n) per operation |
 | Top-K Min-Heap | Tanushri | Top-K competitor retrieval | O(log K) per heap operation |
-| AVL Tree | Tanushka | Problem indexing and search | O(log n) search, insertionand deletion |
+| AVL Tree | Tanushka | Problem indexing and search | O(log n) search, insertion and deletion |
 | Trie | Tanushka | Prefix search and autocomplete | O(L) lookup for a key of length L |
 | KMP | Tanushka | String pattern matching | O(N + M) |
-| Binomial Heap | Nandini | Priority queue operations and merging | O(log n) for insertion, extractionand merge |
+| Binomial Heap | Nandini | Priority queue operations and merging | O(log n) for insertion, extraction and merge |
 | Disjoint Set Union | Nandini | Team grouping and merging | O(α(n)) amortized per operation with path compression and union by rank |
 | Freeze and Reveal Engine | Nandini | Contest scoreboard management | Depends on implementation; O(S log T) for ordered reveal updates |
 
@@ -257,7 +203,7 @@ The backend includes an interactive command-line interface for demonstrating the
 
 The frontend provides a visual interface for interacting with the platform's features.
 
-**Technologies:** HTML5, CSS3, vanilla JavaScriptand SVG.
+**Technologies:** HTML5, CSS3, vanilla JavaScript and SVG.
 
 The frontend provides:
 
@@ -482,9 +428,9 @@ CodeRank includes dedicated test suites for individual modules and an integrated
 
 | Test File | Testing Scope | Contributor |
 |---|---|---|
-| `test_ranking.cpp` | Treap, Segment Treeand Top-K Heap | Tanushri |
-| `test_problems_search.cpp` | AVL Tree, Trieand KMP | Tanushka |
-| `test_judging_teams.cpp` | Binomial Heap, DSUand Freeze/Reveal | Nandini |
+| `test_ranking.cpp` | Treap, Segment Tree and Top-K Heap | Tanushri |
+| `test_problems_search.cpp` | AVL Tree, Trie and KMP | Tanushka |
+| `test_judging_teams.cpp` | Binomial Heap, DSU and Freeze/Reveal | Nandini |
 | `test_integrated_platform.cpp` | Cross-module integration | All team members |
 
 ### Running the Tests
@@ -523,7 +469,7 @@ The `algorithm/` directory contains Markdown documentation for the principal alg
 | `trie_algorithm.md` | Prefix search and autocomplete |
 | `kmp_algorithm.md` | Knuth–Morris–Pratt pattern matching |
 | `binomial_heap_algorithm.md` | Binomial Heap operations |
-| `disjoint_set_union_algorithm.md` | DSU, union by rankand path compression |
+| `disjoint_set_union_algorithm.md` | DSU, union by rank and path compression |
 | `freeze_reveal_algorithm.md` | Scoreboard freezing and result revelation |
 | `judging_teams_algorithm.md` | Submission judging and team management |
 
